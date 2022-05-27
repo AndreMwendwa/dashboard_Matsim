@@ -1,0 +1,4 @@
+# Les heures qui tombent dans chacun des catégories (PPM, PCJ, PPS)
+PPM: [06, 10]        # Période de la pointe du matin
+PCJ: [10, 16]       # Période creuse de la journée
+PPS: [16, 20]       # Période de la pointe du soir.
