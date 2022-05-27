@@ -10,21 +10,17 @@ import sys
 from textwrap import wrap
 from pandas.plotting import parallel_coordinates
 import datapane as dp
-# from pyunpack import Archive
-# from py7zr import unpack_7zarchive
 import gzip
 import shutil
 import json
 from collections import namedtuple
 from dotmap import DotMap
-# import shapefile as shp
 import shapely.geometry
 from shapely.geometry import Point
 import PySimpleGUI as sg
 from pathlib import Path
 import yaml
 import geopandas as gpd
-import pickle as pkl
 from collections import namedtuple
 from matplotlib import style
 style.use('seaborn')
@@ -88,11 +84,7 @@ class all_outputs:
             # else it will read what has been saved already
             dbfile = open(f1 + f'/output_trips{self.name_zone}', 'rb')
             self.output_trips = pkl.load(dbfile)
-        # self.output_trips = (pd.read_csv(self.path_data + '/simulation_output_40iters/output_trips.csv', sep=';')
-        #                      .sample(50000)
-        #                      .reset_index()
-        #                      .drop('index', axis=1)
-        #                      )
+
         #TODO: Restore to correct state
         with open(f'{self.path_data}\\meta.json', 'r') as json_data:
             self.meta = json.load(json_data)
@@ -125,21 +117,7 @@ class all_outputs:
         )
         return chart
 
-    # def graphs_mobility2(self, df_input, name):
-    #     rolling_sum = 0     # The values that we will plot in the bar graphs
-    #     plot_values = {}
-    #     for col in df_input.columns.to_list()[1:]:
-    #         rolling_sum += df_input.loc[name, col]
-    #         plot_values[col] = rolling_sum
-    #     fig, ax = plt.subplots(figsize=(5, 3))
-    #     colors_used = ['#C8E6C9', '#80DEEA', '#FFECB3', '#FFAB91', '#E57373', 'violet']
-    #     i = 0   # Counter for the colors
-    #     for key, value in reversed(plot_values.items()):
-    #         sns.barplot(x=[' '], y=[value], color=colors_used[i], label=key)
-    #         i += 1
-    #     ax.legend(loc="right", frameon=True)
-    #     plt.title(f'Bar Plot of {name} trips')
-    #     return fig
+
 
     def mobility_indicators_total(self, period):
         if period == 'whole_day':
@@ -394,20 +372,12 @@ class all_outputs:
         df_in_out = pd.merge(df_in, df_out, on=['Time', 'typeAgent_col'], how='outer')      # Merge df's, on time and
         # typeAgent
         df_in_out[['nb_out', 'nb_in']] = df_in_out[['nb_out', 'nb_in']].fillna(0).copy()
-        # df_in_out = (
-        #     df_in_out.sort_values(by=['Time', 'typeAgent_col']).reset_index(drop=True).groupby(by='typeAgent_col')
-        #     .cumsum()
-        # )
-        # df_in_out = (
-        #     df_in_out.sort_values(by=['Time', 'typeAgent_col']).reset_index(drop=True).groupby(by='typeAgent_col')
-        # )
 
-        # Cumsum for residents, commuters, tourists separately, because these labels are lost if it's done under the
-        # groupby
         # Residents
         df_res = df_in_out.loc[df_in_out['typeAgent_col'] == 'Residents'].copy().sort_values(by='Time')
         df_res.loc[:, ('nb_in', 'nb_out')] = df_res.loc[:, ('nb_in', 'nb_out')].cumsum()
         df_res['nb_cum'] = df_res['nb_in'] - df_res['nb_out'] + self.mobility_indicators_other_wd.residents_population
+
         # Commuters
         df_comm = df_in_out.loc[df_in_out['typeAgent_col'] == 'Commuters'].copy().sort_values(by='Time')
         df_comm.loc[:, ('nb_in', 'nb_out')] = df_comm.loc[:, ('nb_in', 'nb_out')].cumsum()
@@ -420,14 +390,6 @@ class all_outputs:
 
         df_combine = pd.concat([df_res, df_tour, df_comm]).reset_index(drop=True).sort_values(by='Time')
 
-        # df_result = pd.merge(df_res[['Time', 'nb_cum']], df_comm[['Time', 'nb_cum']],
-        #     on='Time', how='outer').rename(columns={'nb_cum_x': 'nb_cum_res', 'nb_cum_y': 'nb_cum_comm'})
-        # df_result = pd.merge(df_result, df_tour[['Time', 'nb_cum']],
-        #     on='Time', how='outer').rename(columns={'nb_cum': 'nb_cum_tour'}).sort_values(by='Time')
-        # df_result.loc[:, ('nb_cum_res', 'nb_cum_comm', 'nb_cum_tour')] = \
-        #     df_result.loc[:, ('nb_cum_res', 'nb_cum_comm', 'nb_cum_tour')].fillna(0)
-        # df_result['nb_cum_res'] += self.mobility_indicators_other_wd.residents_population
-        # df_result['nb_cum'] = df_result['nb_cum_res'] + df_result['nb_cum_comm'] + df_result['nb_cum_tour']
         return df_combine
 
     def plot_presence(self):
@@ -443,29 +405,6 @@ class all_outputs:
         )
         return chart
 
-    # def plot_presence(self):
-    #     df_presence = self.df_presenceAgent.copy()
-    #     fig = plt.figure()
-    #     ax1 = fig.add_subplot()
-    #     sns.lineplot(ax=ax1, x=df_presence['Time'].dt.round('30min'), y=df_presence['nb_cum_res'])
-    #     sns.lineplot(ax=ax1, x=df_presence['Time'].dt.round('30min'), y=df_presence['nb_cum_res'] +
-    #                                                                     df_presence['nb_cum_comm'])
-    #     sns.lineplot(ax=ax1, x=df_presence['Time'].dt.round('30min'),
-    #                  y=df_presence['nb_cum_res'] + df_presence['nb_cum_comm'] + df_presence['nb_cum_tour'])
-    #     ax1.set_ylabel('Number of people')
-    #     return fig
-
-    # def plot_distance_motive(self):
-    #     df = self.df_avg_tripAttrMotiveAgentLocation.copy()
-    #     df.index = df['typeAgent']
-    #     fig, axes = plt.subplots(5, 2)
-    #     i = 0       # counter for axes
-    #     for typeLoc in ['Local', 'Regional']:
-    #         for end_act in ['leisure', 'shop', 'work', 'education', 'home']:
-    #             mask = (df['tripAttr'] == 'Distance') & (df['typeLocation'] == typeLoc) & (df['end_activity_type'] == end_act)
-    #             sns.barplot(y=df.loc[mask, ('typeAgent')], x=df.loc[mask, ('avg')], ax=axes[i])
-    #             i += 1
-    #     return fig
 
     def plot_distance_motive(self):
         df = self.df_avg_tripAttrMotiveAgentLocation.copy()
@@ -494,108 +433,10 @@ class all_outputs:
         # chart1 = chart1a | chart1b
         chart1 = alt.hconcat(chart1a, chart1b)
 
-        # chart2a = alt.Chart(df.loc[(df['typeLocation'] == 'Local') & (df['tripAttr'] == 'Time')], width=500,
-        #                     height=alt.Step(8)).mark_bar().encode(
-        #     y=alt.Y("typeAgent:N", axis=None),
-        #     x=alt.X("avg:Q", title=None, axis=alt.Axis(), sort='descending', scale={'domain': [0, 55]}),
-        #     color=alt.Color(
-        #         "typeAgent:N", title="Agent Types", legend=alt.Legend(orient="bottom", titleOrient="left")
-        #     ),
-        #     row=alt.Row("end_activity_type:N", title="Trip Motives", header=alt.Header(labelAngle=0)),
-        #
-        # )
-        #
-        # chart2b = alt.Chart(df.loc[(df['typeLocation'] == 'Regional') & (df['tripAttr'] == 'Time')], width=500,
-        #                     height=alt.Step(8)).mark_bar().encode(
-        #     y=alt.Y("typeAgent:N", axis=None),
-        #     x=alt.X("avg:Q", title=None, axis=alt.Axis(), scale={'domain': [0, 55]}),
-        #     color=alt.Color(
-        #         "typeAgent:N", title="Agent Types", legend=alt.Legend(orient="bottom", titleOrient="left")
-        #     ),
-        #     row=alt.Row("end_activity_type:N", title=None, header=alt.Header(labels=False)),
-        #
-        # )
-        #
-        # # chart2 = chart2a | chart2b
-        # chart2 = alt.hconcat(chart2a, chart2b)
 
-        # chart = chart1 & chart2
         return chart1
 
-    # def barplot2(self, mask_in, colors_used, name, fig):
-    #     mask = (
-    #             (self.df_aggr_RegAgentLoc['typeAgent'] == mask_in.typeAgent) &
-    #             (self.df_aggr_RegAgentLoc['Region'] == mask_in.Region) &
-    #             (self.df_aggr_RegAgentLoc['tripAttr'] == mask_in.tripAttr) &
-    #             (self.df_aggr_RegAgentLoc['typeLocation'] == mask_in.typeLocation)
-    #     )
-    #     trips_plot = self.df_aggr_RegAgentLoc.loc[mask].copy()
-    #     rolling_sum = 0  # The values that we will plot in the bar graphs
-    #     plot_values = {}
-    #     # plot_text = [0]     # Counter for the text to be plotted.
-    #     for mode in self.modes['modes']:
-    #         rolling_sum += trips_plot.loc[mode, 'pct']
-    #         plot_values[mode] = rolling_sum
-    #         # plot_text.append(rolling_sum)
-    #     ax = fig.add_subplot(figsize=(8, 3))
-    #     # colors_used = ['#CDE2CD', '#90D2DA', '#F4E6BE', '#EFB4A2', '#D48484']
-    #     i = 0  # Counter for the colors
-    #     for key, value in reversed(plot_values.items()):
-    #         sns.barplot(x=[' '], y=[value], color=colors_used[i], label=key)
-    #         # plt.text(plot_text[i] + plot_text[i + 1])
-    #         i += 1
-    #     ax.legend(loc="right", frameon=True)
-    #     plt.title(f'Bar Plot of {name} trips')
-    #     return fig
 
-    # def barplot(self, mask_in, colors_used, name):
-    #     mask = (
-    #             (self.df_aggr_RegAgentLoc['typeAgent'] == mask_in.typeAgent) &
-    #             (self.df_aggr_RegAgentLoc['Region'] == mask_in.Region) &
-    #             (self.df_aggr_RegAgentLoc['tripAttr'] == mask_in.tripAttr) &
-    #             (self.df_aggr_RegAgentLoc['typeLocation'] == mask_in.typeLocation)
-    #     )
-    #     trips_plot = self.df_aggr_RegAgentLoc.loc[mask].copy()
-    #     rolling_sum = 0  # The values that we will plot in the bar graphs
-    #     plot_values = {}
-    #     # plot_text = [0]     # Counter for the text to be plotted.
-    #     for mode in self.modes['modes']:
-    #         rolling_sum += trips_plot.loc[mode, 'pct']
-    #         plot_values[mode] = rolling_sum
-    #         # plot_text.append(rolling_sum)
-    #     fig, ax = plt.subplots(figsize=(5, 3))
-    #     # colors_used = ['#CDE2CD', '#90D2DA', '#F4E6BE', '#EFB4A2', '#D48484']
-    #     i = 0  # Counter for the colors
-    #     for key, value in reversed(plot_values.items()):
-    #         sns.barplot(x=[' '], y=[value], color=colors_used[i], label=key)
-    #         # plt.text(plot_text[i] + plot_text[i + 1])
-    #         i += 1
-    #     ax.legend(loc="right", frameon=True)
-    #     plt.title(f'Bar Plot of {name} trips')
-    #     return fig
-
-    # def barplot3(self, mask_in, colors_used, name):
-    #     mask = (
-    #             (self.df_aggr_RegAgentLoc['typeAgent'] == mask_in.typeAgent) &
-    #             (self.df_aggr_RegAgentLoc['Region'] == mask_in.Region) &
-    #             (self.df_aggr_RegAgentLoc['tripAttr'] == mask_in.tripAttr) &
-    #             (self.df_aggr_RegAgentLoc['typeLocation'] == mask_in.typeLocation)
-    #     )
-    #     trips_plot = self.df_aggr_RegAgentLoc.loc[mask].copy()
-    #     rolling_sum = 0  # The values that we will plot in the bar graphs
-    #     plot_values = {}
-    #     for mode in self.modes['modes']:
-    #         rolling_sum += trips_plot.loc[mode, 'pct']
-    #         plot_values[mode] = rolling_sum
-    #     fig, ax = plt.subplots(figsize=(5, 3))
-    #     # colors_used = ['#CDE2CD', '#90D2DA', '#F4E6BE', '#EFB4A2', '#D48484']
-    #     i = 0  # Counter for the colors
-    #     for key, value in reversed(plot_values.items()):
-    #         sns.barplot(x=[' '], y=[value], color=colors_used[i], label=key)
-    #         i += 1
-    #     ax.legend(loc="right", frameon=True)
-    #     plt.title(f'Bar Plot of {name} trips')
-    #     return fig
 
     def check_if_in_shape(self, col_x, col_y, name):
         trips = self.output_trips.copy()
@@ -607,45 +448,7 @@ class all_outputs:
         self.output_trips[f'In_Zone_{name}'].fillna(0, inplace=True)
 
 
-        # sf = shp.Reader(self.shapefile_folder)
-        # shape = shapely.geometry.asShape(sf.shape(0))
-        # minx, miny, maxx, maxy = shape.bounds
-        # bounding_box = shapely.geometry.box(minx, miny, maxx, maxy)
-        # # trips['In_zone'] = 0
-        # In_Zone = pd.Series(np.zeros(trips.shape[0]))
-        #
-        # i = 0    # Counter needed here
-        # for line in trips.itertuples():
-        #     pt = shapely.geometry.Point(int(line[col_x + 1]), int(line[col_y + 1]))     # We add 1 because of the
-        #     # itertuples
-        #     if bounding_box.contains(pt):
-        #         if shape.contains(pt):
-        #             In_Zone[i] = 1
-        #     i += 1
-        # In_Zone.index = self.output_trips.index
-        # self.output_trips[f'In_Zone_{name}'] = In_Zone
 
-
-    # def check_if_in_shape2(self, col_x, col_y, name):
-    #     trips = self.output_trips.copy()
-    #     sf = shp.Reader(self.shapefile_folder)
-    #     shape = shapely.geometry.asShape(sf.shape(0))
-    #     minx, miny, maxx, maxy = shape.bounds
-    #     bounding_box = shapely.geometry.box(minx, miny, maxx, maxy)
-    #     # trips['In_zone'] = 0
-    #     In_Zone = pd.Series(np.zeros(trips.shape[0]))
-    #
-    #     i = 0    # Counter needed here
-    #     for line in trips.itertuples():
-    #         pt = shapely.geometry.Point(int(line[col_x + 1]), int(line[col_y + 1]))     # We add 1 because of the
-    #         # itertuples
-    #         if bounding_box.contains(pt):
-    #             if shape.contains(pt):
-    #                 In_Zone[i] = 1
-    #         i += 1
-    #     In_Zone.index = self.output_trips.index
-    #     self.output_trips[f'In_Zone_{name}'] = In_Zone
-    #     # In_Zone.to_csv(f'In_Zone_{name}')
 
 
 def dashboard_datapane_matsim(scenario):
